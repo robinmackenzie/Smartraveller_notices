@@ -52,11 +52,11 @@ end
 def get_notice_level(notice)
 	if notice.downcase.include? "normal"
 		return 1
-	else if noticedowncase.include? "caution"
+	elsif notice.downcase.include? "caution"
 		return 2
-	else if noticedowncase.include? "reconsider"
+	elsif notice.downcase.include? "reconsider"
 		return 3
-	else if noticedowncase.include? "do not travel"
+	elsif notice.downcase.include? "do not travel"
 		return 4
 	else
 		return -1

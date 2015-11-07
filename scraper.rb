@@ -59,21 +59,20 @@ def do_scrape
 						country_notice_short = "None"
 						level = 0
 					end
+
+					# construct record for this country, on this date
+			    	record = {
+			      		date: today,
+			      		continent: continent,
+			      		region: region,
+			      		country: country_name,
+			      		notice: country_notice_short,
+			      		level: level
+			    		}
+
+				    # update database
+				    ScraperWiki.save_sqlite([:date, :country], record)
 				end
-	
-				# construct record for this country, on this date
-			    record = {
-			      date: today,
-			      continent: continent,
-			      region: region,
-			      country: country_name,
-			      notice: country_notice_short,
-			      level: level
-			    }
-
-			    # update database
-			    ScraperWiki.save_sqlite([:date, :country], record)
-
 			end
 		end
 	end

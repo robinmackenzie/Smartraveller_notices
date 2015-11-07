@@ -14,7 +14,6 @@ def do_scrape
 	base_url = "http://smartraveller.gov.au"
 	continent_region_items = get_continent_regions
 	today = Time.now.strftime("%Y-%m-%d")
-	notice_prefix = "Official advice: "
 
 	# region pages have an unordered list of countries
 	country_list_hook = "ul.list_statuses"
@@ -47,30 +46,28 @@ def do_scrape
 
 				# get country info
 				country_name = country_hook.at("a").inner_text.strip
-				country_url = base_url + country_hook.at("a").attr("href")
-				
-				# get country page
-				country_page = agent.get(country_url)
-				country_target_div = country_page.at(notice_hook)
+				# count spans in list item - should be 3
+				country_span_count = country_hook.search("span").count
 
-				# parse notice if div is present
-				if not country_target_div == nil
-					notice = country_target_div.text.gsub(/\s+/, " ").strip
-					notice = notice.gsub! notice_prefix, ""
-					level = get_notice_level(notice)
-				else
-					# no notice for this country
-					notice = "None"
-					level = 0
+				if country_span_count >= 2
+					country_notice_short = country_hook.search("span")[2].inner_text.strip
+					# parse notice if div is present
+					if not country_notice_short == ""
+						level = get_notice_level(country_notice_short)
+					else
+						# no notice for this country
+						country_notice_short = "None"
+						level = 0
+					end
 				end
-
+	
 				# construct record for this country, on this date
 			    record = {
 			      date: today,
 			      continent: continent,
 			      region: region,
 			      country: country_name,
-			      notice: notice,
+			      notice: country_notice_short,
 			      level: level
 			    }
 

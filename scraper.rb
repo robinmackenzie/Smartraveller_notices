@@ -5,49 +5,90 @@ def do_scrape
 	# set reference to mechanize
 	agent = Mechanize.new
 
+	# counters/ timer
+	start_time = Time.now
+	country_count = 0
+	region_count = 0
+
 	# set variables for smartraveller.com.au country notices
-	base_url = "http://smartraveller.gov.au/countries/"
-	countries = get_countries
+	base_url = "http://smartraveller.gov.au"
+	continent_region_items = get_continent_regions
 	today = Time.now.strftime("%Y-%m-%d")
 	notice_prefix = "Official advice: "
 
-	# countries with a notice will have a div with a notice class
-	# countries without a notice will not
-	hook = "div.notice"
+	# region pages have an unordered list of countries
+	country_list_hook = "ul.list_statuses"
 
-	# iterate country list
-	countries.each do |country|
-		country_url = base_url + country
-		page = agent.get(country_url)
-		target_div = page.at(hook)
+	# country pages with a notice will have a div with a notice class
+	# country pages without a notice will not
+	notice_hook = "div.notice"
 
-		if not target_div == nil
-			notice = target_div.text.gsub(/\s+/, " ").strip
-			notice = notice.gsub! notice_prefix, ""
-			level = get_notice_level(notice)
-		else
-			notice = "Nil"
-			level = 0
+	# iterate continent region list
+	continent_region_items.each do |item|
+		# increment region counter
+		region_count += 1
+
+		# columns 0, 1 and 2 are continent, region and url
+		continent = item[0]
+		region = item[1]
+		region_url = item[2]
+
+		# get a page of region countries
+		region_page = agent.get(base_url + region_url)
+
+		# get list of countries
+		target_list = region_page.at(country_list_hook)
+		if not target_list == nil
+
+			# iterate list items and check each country page
+			target_list.search("li").each do |country_hook|
+				# increment country counter
+				country_count += 1
+
+				# get country info
+				country_name = country_hook.at("a").inner_text.strip
+				country_url = base_url + country_hook.at("a").attr("href")
+				
+				# get country page
+				country_page = agent.get(country_url)
+				country_target_div = country_page.at(notice_hook)
+
+				# parse notice if div is present
+				if not country_target_div == nil
+					notice = country_target_div.text.gsub(/\s+/, " ").strip
+					notice = notice.gsub! notice_prefix, ""
+					level = get_notice_level(notice)
+				else
+					# no notice for this country
+					notice = "None"
+					level = 0
+				end
+
+				# construct record for this country, on this date
+			    record = {
+			      date: today,
+			      continent: continent,
+			      region: region,
+			      country: country_name,
+			      notice: notice,
+			      level: level
+			    }
+
+			    # update database
+			    ScraperWiki.save_sqlite([:date, :country], record)
+
+			end
 		end
-
-	    record = {
-	      date: today,
-	      country: country,
-	      notice: notice,
-	      level: level
-	    }
-
-	    p record
-	 
 	end
 
+	# output to console
+	finish_time = Time.now
+	puts "Start time: " + start_time.strftime("%Y-%m-%d %H:%M:%S")
+	puts "Regions analysed: " + region_count.to_s
+	puts "Countries analysed: " + country_count.to_s
+	puts "Finish time: " + finish_time.strftime("%Y-%m-%d %H:%M:%S")
+	puts "Elapsed time (s): " + (finish_time - start_time).to_s
 end
-
-# # Write out to the sqlite database using scraperwiki library
-# ScraperWiki.save_sqlite(["name"], {"name" => "susan", "occupation" => "software developer"})
-#
-# # An arbitrary query against the database
-# ScraperWiki.select("* from data where 'name'='peter'")
 
 def get_notice_level(notice)
 	if notice.downcase.include? "normal"
@@ -63,219 +104,29 @@ def get_notice_level(notice)
 	end
 end
 
-def get_countries
+def get_continent_regions
 	return [
-		"Afghanistan", 
-		"Albania", 
-		"Algeria", 
-		"American_Samoa", 
-		"Andorra", 
-		"Angola", 
-		"Antigua_and_Barbuda", 
-		"Argentina", 
-		"Armenia", 
-		"Aruba", 
-		"Austria", 
-		"Azerbaijan", 
-		"Bahamas", 
-		"Bahrain", 
-		"Bangladesh", 
-		"Barbados", 
-		"Belarus", 
-		"Belgium", 
-		"Belize", 
-		"Benin", 
-		"Bhutan", 
-		"Bolivia", 
-		"Bosnia_and_Herzegovina", 
-		"Botswana", 
-		"Brazil", 
-		"Brunei_Darussalam", 
-		"Bulgaria", 
-		"Burkina_Faso", 
-		"Burma", 
-		"Burundi", 
-		"Cabo_Verde", 
-		"Cambodia", 
-		"Cameroon", 
-		"Canada", 
-		"Central_African_Republic", 
-		"Chad", 
-		"Chile", 
-		"China", 
-		"Colombia", 
-		"Comoros", 
-		"Cook_Islands", 
-		"Costa_Rica", 
-		"Croatia", 
-		"Cuba", 
-		"Cyprus", 
-		"Czech_Republic", 
-		"Ivory_Coast", 
-		"North_Korea", 
-		"Democratic_Republic_of_the_Congo", 
-		"Denmark", 
-		"Djibouti", 
-		"Dominica", 
-		"Dominican_Republic", 
-		"Ecuador", 
-		"Egypt", 
-		"El_Salvador", 
-		"Equatorial_Guinea", 
-		"Eritrea", 
-		"Estonia", 
-		"Ethiopia", 
-		"Federated_States_of_Micronesia", 
-		"Fiji", 
-		"Finland", 
-		"Former_Yugoslav_Republic_of_Macedonia", 
-		"France", 
-		"French_Polynesia", 
-		"Gabon", 
-		"Gambia", 
-		"Georgia", 
-		"Germany", 
-		"Ghana", 
-		"Gibraltar", 
-		"Greece", 
-		"Greenland", 
-		"Grenada", 
-		"Guam", 
-		"Guatemala", 
-		"Guinea", 
-		"Guinea-Bissau", 
-		"Guyana", 
-		"Haiti", 
-		"Honduras", 
-		"Hong_Kong", 
-		"Hungary", 
-		"Iceland", 
-		"India", 
-		"Indonesia", 
-		"Iran", 
-		"Iraq", 
-		"Ireland", 
-		"Israel_Gaza_Strip_and_West_Bank", 
-		"Italy", 
-		"Jamaica", 
-		"Japan", 
-		"Jordan", 
-		"Kazakhstan", 
-		"Kenya", 
-		"Kiribati", 
-		"Kosovo", 
-		"Kuwait", 
-		"Kyrgyz_Republic", 
-		"Laos", 
-		"Latvia", 
-		"Lebanon", 
-		"Lesotho", 
-		"Liberia", 
-		"Libya", 
-		"Liechtenstein", 
-		"Lithuania", 
-		"Luxembourg", 
-		"Macau", 
-		"Madagascar", 
-		"Malawi", 
-		"Malaysia", 
-		"Maldives", 
-		"Mali", 
-		"Malta", 
-		"Marshall_Islands", 
-		"Mauritania", 
-		"Mauritius", 
-		"Mexico", 
-		"Moldova", 
-		"Monaco", 
-		"Mongolia", 
-		"Montenegro", 
-		"Morocco", 
-		"Mozambique", 
-		"Namibia", 
-		"Nauru", 
-		"Nepal", 
-		"Netherlands", 
-		"Netherlands_Antilles", 
-		"New_Caledonia", 
-		"New_Zealand", 
-		"Nicaragua", 
-		"Niger", 
-		"Nigeria", 
-		"Niue", 
-		"Northern_Mariana_Islands", 
-		"Norway", 
-		"Oman", 
-		"Pakistan", 
-		"Palau", 
-		"Panama", 
-		"Papua_New_Guinea", 
-		"Paraguay", 
-		"Peru", 
-		"Philippines", 
-		"Poland", 
-		"Portugal", 
-		"Puerto_Rico", 
-		"Qatar", 
-		"South_Korea", 
-		"Congo", 
-		"Reunion", 
-		"Romania", 
-		"Russia", 
-		"Rwanda", 
-		"Saint_Kitts_and_Nevis", 
-		"Saint_Lucia", 
-		"Saint_Vincent_and_the_Grenadines", 
-		"Samoa", 
-		"San_Marino", 
-		"Sao_Tome_and_Principe", 
-		"Saudi_Arabia", 
-		"Senegal", 
-		"Serbia", 
-		"Seychelles", 
-		"Sierra_Leone", 
-		"Singapore", 
-		"Slovakia", 
-		"Slovenia", 
-		"Solomon_Islands", 
-		"Somalia", 
-		"South_Africa", 
-		"South_Sudan", 
-		"Spain", 
-		"Sri_Lanka", 
-		"Sudan", 
-		"Suriname", 
-		"Swaziland", 
-		"Sweden", 
-		"Switzerland", 
-		"Syria", 
-		"Taiwan", 
-		"Tajikistan", 
-		"Tanzania", 
-		"Thailand", 
-		"Timor_Leste", 
-		"Togo", 
-		"Tonga", 
-		"Trinidad_and_Tobago", 
-		"Tunisia", 
-		"Turkey", 
-		"Turkmenistan", 
-		"Tuvalu", 
-		"Uganda", 
-		"Ukraine", 
-		"United_Arab_Emirates", 
-		"United_Kingdom", 
-		"United_States_of_America", 
-		"Uruguay", 
-		"Uzbekistan", 
-		"Vanuatu", 
-		"Venezuela", 
-		"Vietnam", 
-		"Wallis_and_Futuna", 
-		"Yemen", 
-		"Zambia", 
-		"Zimbabwe" 
-	]
+			["Americas", "Caribbean", "/countries/americas/caribbean/"],
+			["Americas", "Central America", "/countries/americas/central/"],
+			["Americas", "North America", "/countries/americas/north/"],
+			["Americas", "South America", "/countries/americas/south/"],
+			["Africa", "Central Africa", "/countries/africa/central/"],
+			["Africa", "East Africa", "/countries/africa/east/"],
+			["Africa", "North Africa", "/countries/africa/north/"],
+			["Africa", "Southern Africa", "/countries/africa/southern/"],
+			["Africa", "West Africa", "/countries/africa/west/"],
+			["Asia", "Central Asia", "/countries/asia/central/"],
+			["Asia", "North Asia", "/countries/asia/north/"],
+			["Asia", "South Asia", "/countries/asia/south/"],
+			["Asia", "South East Asia", "/countries/asia/south-east/"],
+			["Europe", "Eastern Europe", "/countries/europe/eastern/"],
+			["Europe", "Northern Europe", "/countries/europe/northern/"],
+			["Europe", "Southern Europe", "/countries/europe/southern"],
+			["Europe", "Western Europe", "/countries/europe/western/"],
+			["RoW", "Middle east", "/countries/middle-east/"],
+			["RoW", "Pacific", "/countries/pacific/"]
+		]
+
 end
 
 # call main method

@@ -24,14 +24,17 @@ def do_scrape
 		if not target_div == nil
 			notice = target_div.text.gsub(/\s+/, " ").strip
 			notice = notice.gsub! notice_prefix, ""
+			level = get_notice_level(notice)
 		else
 			notice = "Nil"
+			level = 0
 		end
 
 	    record = {
 	      date: today,
 	      country: country,
-	      notice: notice
+	      notice: notice,
+	      level: level
 	    }
 
 	    p record
@@ -45,6 +48,20 @@ end
 #
 # # An arbitrary query against the database
 # ScraperWiki.select("* from data where 'name'='peter'")
+
+def get_notice_level(notice)
+	if notice.downcase.include? "normal"
+		return 1
+	else if noticedowncase.include? "caution"
+		return 2
+	else if noticedowncase.include? "reconsider"
+		return 3
+	else if noticedowncase.include? "do not travel"
+		return 4
+	else
+		return -1
+	end
+end
 
 def get_countries
 	return [
